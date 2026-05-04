@@ -1,0 +1,22 @@
+{
+  "source.manual": "Manuel Mod",
+  "source.automatic": "Otomatik Mod",
+
+  "log.already-credited": "[{{source}}] '{{fishName}}' zaten koleksiyonda kayıtlı, işlem atlandı.",
+  "log.credit-needed": "[{{source}}] Koleksiyonda olmayan balık bulundu, koleksiyon kaydı işleniyor: {{fishName}}",
+  "log.credit-success": "[{{source}}] '{{fishName}}' koleksiyona başarıyla işlendi (I Caught This Continued).",
+  "log.credit-no-change": "[{{source}}] vanilla caughtFish, '{{fishName}}' için koleksiyonda değişiklik yapmadı.",
+
+  "hud.credit-success": "{{fishName}} Balık Koleksiyonuna eklendi.",
+  "hud.already-credited": "{{fishName}} zaten Balık Koleksiyonunda mevcut.",
+  "hud.not-fish": "{{itemName}} koleksiyona eklenebilir bir balık değil.",
+  "hud.not-holding-item": "Önce elinizde bir balık tutun.",
+  "hud.no-change": "{{fishName}} koleksiyona eklenemedi.",
+
+  "config.mode.name": "Tetikleme modu",
+  "config.mode.tooltip": "Balıkların envanterinize girdiğinde otomatik olarak mı yoksa yalnızca manuel tetikleme tuşuna bastığınızda mı koleksiyona ekleneceğini seçin.",
+  "config.mode.manual": "Manuel",
+  "config.mode.automatic": "Otomatik",
+  "config.trigger-key.name": "Manuel tetikleme tuşu",
+  "config.trigger-key.tooltip": "Manuel mod etkinken elde tutulan balığı koleksiyona eklemek için kullanılan tuş."
+}

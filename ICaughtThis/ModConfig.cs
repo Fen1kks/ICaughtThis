@@ -1,11 +1,17 @@
 ﻿using StardewModdingAPI;
-using System.Collections.Generic;
 
-namespace ICaughtThis
+namespace ICaughtThisContinued
 {
-    class ModConfig
+    public enum TriggerMode
     {
-        // key to claim credit
-        public SButton ClaimCreditKey = SButton.F9;
+        Manual,
+        Automatic
+    }
+
+    public class ModConfig
+    {
+        public TriggerMode Mode { get; set; } = TriggerMode.Automatic;
+        
+        public SButton TriggerKey { get; set; } = SButton.F9;
     }
 }

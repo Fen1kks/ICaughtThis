@@ -4,6 +4,10 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>I Caught This Continued</AssemblyName>
+    <RootNamespace>ICaughtThisContinued</RootNamespace>
+    <EnableModDeploy>false</EnableModDeploy>
+    <ModFolderName>I Caught This Continued</ModFolderName>
   </PropertyGroup>
 
   <ItemGroup>

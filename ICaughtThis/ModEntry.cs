@@ -1,145 +1,187 @@
-﻿using GenericModConfigMenu;
+using GenericModConfigMenu;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
-using StardewValley.Extensions;
 
-namespace ICaughtThis
+namespace ICaughtThisContinued
 {
     public class ModEntry : Mod
     {
-        /*********
-        ** Properties
-        *********/
-        /// <summary>The mod configuration from the player.</summary>
-        private ModConfig Config;
+        private ModConfig Config = null!;
 
-        /*********
-        ** Public methods
-        *********/
-        /// <summary>The mod entry point, called after the mod is first loaded.</summary>
-        /// <param name="helper">Provides simplified APIs for writing mods.</param>
+        private enum CreditResult
+        {
+            Credited,
+            AlreadyCredited,
+            NotFish,
+            NoChange
+        }
+
         public override void Entry(IModHelper helper)
         {
             this.Config = this.Helper.ReadConfig<ModConfig>();
 
-            Helper.Events.GameLoop.GameLaunched += (e, a) => OnGameLaunched(e, a);
-            Helper.Events.Input.ButtonPressed += (e, a) => OnButtonPressed(e, a);
+            helper.Events.GameLoop.GameLaunched += OnGameLaunched;
+            helper.Events.Input.ButtonPressed += OnButtonPressed;
+            helper.Events.Player.InventoryChanged += OnInventoryChanged;
         }
 
-        /// <summary>Add to Generic Mod Config Menu</summary>
-        private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
+        private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
         {
-            // get Generic Mod Config Menu's API (if it's installed)
             var configMenu = this.Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
             if (configMenu is null)
+            {
                 return;
+            }
 
-            // register mod
             configMenu.Register(
                 mod: this.ModManifest,
                 reset: () => this.Config = new ModConfig(),
                 save: () => this.Helper.WriteConfig(this.Config)
             );
 
-            // add config options
+            configMenu.AddTextOption(
+                mod: this.ModManifest,
+                getValue: () => this.Config.Mode.ToString(),
+                setValue: value =>
+                {
+                    if (Enum.TryParse(value, out TriggerMode mode))
+                    {
+                        this.Config.Mode = mode;
+                    }
+                },
+                name: () => Translate("config.mode.name"),
+                tooltip: () => Translate("config.mode.tooltip"),
+                allowedValues: Enum.GetNames<TriggerMode>(),
+                formatAllowedValue: value => Translate($"config.mode.{value.ToLowerInvariant()}")
+            );
+
             configMenu.AddKeybind(
                 mod: this.ModManifest,
-                name: () => Helper.Translation.Get("Options_ClaimCreditKey"),
-                getValue: () => this.Config.ClaimCreditKey,
-                setValue: value => this.Config.ClaimCreditKey = value
+                getValue: () => this.Config.TriggerKey,
+                setValue: value => this.Config.TriggerKey = value,
+                name: () => Translate("config.trigger-key.name"),
+                tooltip: () => Translate("config.trigger-key.tooltip")
             );
         }
 
-        /// <summary>React to action key</summary>
-        private void OnButtonPressed(object sender, ButtonPressedEventArgs e)
+        private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
         {
-            if (e.Button != this.Config.ClaimCreditKey)
+            if (!Context.IsWorldReady || this.Config.Mode != TriggerMode.Manual) return;
+            if (e.Button != this.Config.TriggerKey) return;
+
+            if (Game1.player.CurrentItem is StardewValley.Object obj)
             {
-                return;
+                CreditResult result = TryCreditFish(Game1.player, obj, "source.manual");
+                if (result == CreditResult.AlreadyCredited)
+                {
+                    ShowHudMessage("hud.already-credited", new { fishName = obj.DisplayName }, HUDMessage.error_type);
+                }
+                else if (result == CreditResult.NotFish)
+                {
+                    ShowHudMessage("hud.not-fish", new { itemName = obj.DisplayName }, HUDMessage.error_type);
+                }
+                else if (result == CreditResult.NoChange)
+                {
+                    ShowHudMessage("hud.no-change", new { fishName = obj.DisplayName }, HUDMessage.error_type);
+                }
+            }
+            else
+            {
+                ShowHudMessage("hud.not-holding-item", null, HUDMessage.error_type);
+            }
+        }
+
+        private void OnInventoryChanged(object? sender, InventoryChangedEventArgs e)
+        {
+            if (!Context.IsWorldReady || !e.IsLocalPlayer || this.Config.Mode != TriggerMode.Automatic) return;
+
+            foreach (Item item in e.Added)
+            {
+                if (item is StardewValley.Object obj)
+                {
+                    TryCreditFish(e.Player, obj, "source.automatic");
+                }
             }
 
-            // What item is current player holding?
-
-            if (Game1.player == null)
+            foreach (ItemStackSizeChange change in e.QuantityChanged)
             {
-                this.Monitor.Log("[I Caught This] No current player", LogLevel.Trace);
-                return;
+                if (change.NewSize > change.OldSize && change.Item is StardewValley.Object obj)
+                {
+                    TryCreditFish(e.Player, obj, "source.automatic");
+                }
+            }
+        }
+
+        private CreditResult TryCreditFish(Farmer player, StardewValley.Object fish, string sourceKey)
+        {
+            if (!TryGetCreditableFishId(fish, out string fishId))
+            {
+                return CreditResult.NotFish;
             }
 
-            if (Game1.player.CurrentItem == null || Game1.player.CurrentItem.itemId == null)
+            string source = Translate(sourceKey);
+            string fishName = fish.DisplayName;
+
+            // Use the same normalized ID format as vanilla to avoid double-counting.
+            if (player.fishCaught.ContainsKey(fishId))
             {
-                this.Monitor.Log("[I Caught This] No current item", LogLevel.Trace);
-                Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_NotHoldingAnything"));
-                return;
+                Monitor.Log(Translate("log.already-credited", new { source, fishName }), LogLevel.Trace);
+                return CreditResult.AlreadyCredited;
             }
 
-            var itemId = Game1.player.CurrentItem.itemId.ToString();
-            var itemName = Game1.player.CurrentItem.DisplayName;
-            this.Monitor.Log($"[I Caught This] Item ID = {itemId}, name = {itemName}", LogLevel.Trace);
+            Monitor.Log(Translate("log.credit-needed", new { source, fishName }), LogLevel.Debug);
+            return HandleFishAction(player, fishId, source, fishName);
+        }
 
-            var metadata = ItemRegistry.GetMetadata(itemId);
-            itemId = metadata.QualifiedItemId;
-            this.Monitor.Log($"[I Caught This] Qualified item ID = {itemId}", LogLevel.Trace);
+        private static bool TryGetCreditableFishId(StardewValley.Object item, out string fishId)
+        {
+            fishId = item.QualifiedItemId;
 
-            // Perform same sanity checks as base game caughtFish()
-
+            var metadata = ItemRegistry.GetMetadata(fishId);
             if (!metadata.Exists())
             {
-                this.Monitor.Log("[I Caught This] {itemId} has no metadata", LogLevel.Trace);
-                Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_NotHoldingAnything"));
-                return;
+                return false;
             }
 
-            if (ItemContextTagManager.HasBaseTag(metadata.QualifiedItemId, "trash_item"))
+            fishId = metadata.QualifiedItemId;
+
+            if (ItemContextTagManager.HasBaseTag(fishId, "trash_item") || fishId == "(O)167")
             {
-                this.Monitor.Log($"[I Caught This] {itemName} is trash", LogLevel.Trace);
-                Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_NotHoldingFish", new { itemName = itemName }));
-                return;
+                return false;
             }
 
-            if (itemId == "(O)167")
+            return metadata.GetParsedData()?.ObjectType == "Fish" || fishId == "(O)372";
+        }
+
+        private CreditResult HandleFishAction(Farmer player, string fishId, string source, string fishName)
+        {
+            // Delegate collection updates and achievement checks to the vanilla method.
+            player.caughtFish(fishId, 9, false, 1);
+
+            if (player.fishCaught.ContainsKey(fishId))
             {
-                this.Monitor.Log($"[I Caught This] {itemName} is Joja Cola", LogLevel.Trace);
-                Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_NotHoldingFish", new { itemName = itemName }));
-                return;
+                Monitor.Log(Translate("log.credit-success", new { source, fishName }), LogLevel.Info);
+                ShowHudMessage("hud.credit-success", new { fishName }, HUDMessage.achievement_type);
+                return CreditResult.Credited;
             }
-
-            var isFish = false;
-            if (metadata.GetParsedData()?.ObjectType == "Fish")
+            else
             {
-                isFish = true;
+                Monitor.Log(Translate("log.credit-no-change", new { source, fishName }), LogLevel.Trace);
+                return CreditResult.NoChange;
             }
-            else if (itemId == "(O)372") // Clam
-            {
-                isFish = true;
-            }
+        }
 
-            if (!isFish)
-            {
-                this.Monitor.Log($"[I Caught This] {itemName} isn't fish", LogLevel.Trace);
-                Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_NotHoldingFish", new { itemName = itemName }));
-                return;
-            }
+        private void ShowHudMessage(string key, object? tokens, int type)
+        {
+            Game1.addHUDMessage(new HUDMessage(Translate(key, tokens), type));
+        }
 
-            // Do they already have credit for catching it?
-
-            if (Game1.player.fishCaught.ContainsKey(itemId))
-            {
-                this.Monitor.Log($"[I Caught This] Already have credit for catching {itemName}", LogLevel.Trace);
-                Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_AlreadyCredited", new { itemName = itemName }));
-                return;
-            }
-
-            // Give them credit
-
-            this.Monitor.Log($"[I Caught This] About to claim credit for catching {itemName}", LogLevel.Debug);
-            Game1.player.caughtFish(
-                itemId: itemId,
-                size: 9 // same as base game's DebugCommands.cs CatchAllFish()
-            );
-            this.Monitor.Log($"[I Caught This] Claimed credit for catching {itemName}", LogLevel.Debug);
-            Game1.drawDialogueNoTyping(Helper.Translation.Get("Response_ClaimedCredit", new { itemName = itemName }));
+        private string Translate(string key, object? tokens = null)
+        {
+            return tokens is null
+                ? Helper.Translation.Get(key).ToString()
+                : Helper.Translation.Get(key, tokens).ToString();
         }
     }
 }

@@ -1,10 +1,16 @@
 {
-  "Name": "I Caught This",
-  "Author": "John Peters (you know, the farmer?)",
-  "Version": "0.9.0",
-  "Description": "Claim credit for catching a fish in your inventory.",
-  "UniqueID": "JohnPeters.ICaughtThis",
-  "EntryDll": "ICaughtThis.dll",
-  "MinimumApiVersion": "3.0.0",
-  "UpdateKeys": [ "Nexus:27632" ]
+  "Name": "I Caught This Continued",
+  "Author": "Fen1kks",
+  "Version": "1.0.0",
+  "Description": "Credits uncaught fish to the collection when they enter your inventory, without interfering with vanilla fishing.",
+  "UniqueID": "Fen1kks.iCaughtThisContinued",
+  "EntryDll": "I Caught This Continued.dll",
+  "MinimumApiVersion": "4.0.0",
+  "Dependencies": [
+    {
+      "UniqueID": "spacechase0.GenericModConfigMenu",
+      "IsRequired": false
+    }
+  ],
+  "UpdateKeys": [ "Nexus:45771" ]
 }

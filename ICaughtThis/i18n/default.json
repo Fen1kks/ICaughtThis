@@ -1,8 +1,22 @@
 {
-  "Response_NotHoldingAnything": "You're not holding anything.",
-  "Response_NotHoldingFish": "{{itemName}} isn't a fish.",
-  "Response_AlreadyCredited": "You already have credit for catching {{itemName}}.",
-  "Response_ClaimedCredit": "You claimed credit for catching {{itemName}}!",
+  "source.manual": "Manual Mode",
+  "source.automatic": "Automatic Mode",
 
-  "Options_ClaimCreditKey": "Claim credit key"
+  "log.already-credited": "[{{source}}] '{{fishName}}' is already credited in the collection; skipped.",
+  "log.credit-needed": "[{{source}}] Uncredited fish found; applying collection credit: {{fishName}}",
+  "log.credit-success": "[{{source}}] '{{fishName}}' was credited to the collection (I Caught This Continued).",
+  "log.credit-no-change": "[{{source}}] vanilla caughtFish didn't change the collection for '{{fishName}}'.",
+
+  "hud.credit-success": "{{fishName}} added to the Fish Collection.",
+  "hud.already-credited": "{{fishName}} is already in the Fish Collection.",
+  "hud.not-fish": "{{itemName}} isn't a creditable fish.",
+  "hud.not-holding-item": "Hold a fish first.",
+  "hud.no-change": "{{fishName}} couldn't be credited.",
+
+  "config.mode.name": "Trigger mode",
+  "config.mode.tooltip": "Choose whether fish are credited automatically when they enter your inventory, or only when you press the manual trigger key.",
+  "config.mode.manual": "Manual",
+  "config.mode.automatic": "Automatic",
+  "config.trigger-key.name": "Manual trigger key",
+  "config.trigger-key.tooltip": "The key used to credit the currently held fish when manual mode is enabled."
 }
